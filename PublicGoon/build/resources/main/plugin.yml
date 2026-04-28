@@ -4,6 +4,18 @@ main: org.please.publicGoon.PublicGoon
 api-version: '1.21'
 commands:
   queue:
-    description: Join a PvP queue for different game modes
-    usage: /queue <axe|uhc|sword>
+    description: Open the PvP queue selector
+    usage: /queue [leave]
     aliases: [q]
+  lobby:
+    description: Teleport to the lobby
+    usage: /lobby
+    aliases: [hub]
+  setlobby:
+    description: Set the lobby spawn to your current location
+    usage: /setlobby
+    permission: publicgoon.admin
+permissions:
+  publicgoon.admin:
+    description: Allows configuring the PublicGoon plugin
+    default: op

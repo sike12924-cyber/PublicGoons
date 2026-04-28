@@ -14,6 +14,6 @@ public class QueueListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         // Remove player from queue when they disconnect
-        queueManager.removeFromQueue(event.getPlayer());
+        queueManager.removeFromQueue(event.getPlayer().getUniqueId(), false);
     }
 }

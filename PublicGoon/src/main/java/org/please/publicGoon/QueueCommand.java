@@ -12,12 +12,15 @@ import org.bukkit.inventory.Inventory;
 public class QueueCommand implements CommandExecutor, Listener {
     private final QueueManager queueManager;
     private final MainInventoryGUI mainInventoryGUI;
-    private final InventorySwords inventorySwords;
+    private LobbyManager lobbyManager;
 
     public QueueCommand(QueueManager queueManager, MainInventoryGUI mainInventoryGUI) {
         this.queueManager = queueManager;
         this.mainInventoryGUI = mainInventoryGUI;
-        this.inventorySwords = new InventorySwords(mainInventoryGUI);
+    }
+
+    public void setLobbyManager(LobbyManager lobbyManager) {
+        this.lobbyManager = lobbyManager;
     }
 
     @Override
@@ -30,19 +33,21 @@ public class QueueCommand implements CommandExecutor, Listener {
         Player player = (Player) sender;
 
         if (args.length == 0) {
-            // Give swords to player and open main inventory
-            inventorySwords.giveSwordsToPlayer(player);
+            if (lobbyManager != null && !lobbyManager.isInLobby(player)) {
+                player.sendMessage("§c§l» §7You can only queue from the lobby. Use §f/lobby§7.");
+                return true;
+            }
             mainInventoryGUI.openMainInventory(player);
-            player.sendMessage("§a§l» §7Queue swords added to your inventory!");
-            player.sendMessage("§7You can also right-click the swords to open game mode selection");
             return true;
         }
 
         String arg = args[0].toLowerCase();
         
         if (arg.equals("leave")) {
+            // leave allowed anywhere
+            ;
             if (queueManager.removeFromQueue(player)) {
-                player.sendMessage("§c§l» §7You have left the queue!");
+                // message already sent by manager
             } else {
                 player.sendMessage("§cYou are not in a queue!");
             }
@@ -100,13 +105,11 @@ public class QueueCommand implements CommandExecutor, Listener {
     private void handleNormalGameModesClick(Player player, int slot) {
         String gameMode = NormalGameModesGUI.getGameModeFromSlot(slot);
         if (gameMode != null) {
-            // Check if player is already in queue
-            if (queueManager.getPlayerQueue(player.getUniqueId()) != null) {
-                player.sendMessage("§cYou are already in a queue! Use /queue leave to exit.");
+            if (lobbyManager != null && !lobbyManager.isInLobby(player)) {
+                player.sendMessage("§cYou must be in the lobby to queue.");
+                player.closeInventory();
                 return;
             }
-            
-            // Add to normal queue
             queueManager.addToQueue(player, gameMode, false);
             player.closeInventory();
         }
@@ -115,13 +118,11 @@ public class QueueCommand implements CommandExecutor, Listener {
     private void handleRankedGameModesClick(Player player, int slot) {
         String gameMode = RankedGameModesGUI.getGameModeFromSlot(slot);
         if (gameMode != null) {
-            // Check if player is already in queue
-            if (queueManager.getPlayerQueue(player.getUniqueId()) != null) {
-                player.sendMessage("§cYou are already in a queue! Use /queue leave to exit.");
+            if (lobbyManager != null && !lobbyManager.isInLobby(player)) {
+                player.sendMessage("§cYou must be in the lobby to queue.");
+                player.closeInventory();
                 return;
             }
-            
-            // Add to ranked queue
             queueManager.addToQueue(player, gameMode, true);
             player.closeInventory();
         }
