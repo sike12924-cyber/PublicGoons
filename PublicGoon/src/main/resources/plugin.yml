@@ -1,0 +1,4 @@
+name: PublicGoon
+version: '1.0'
+main: org.please.publicGoon.PublicGoon
+api-version: '1.21'
