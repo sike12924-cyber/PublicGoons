@@ -7,9 +7,14 @@ import org.bukkit.entity.Player;
 
 public class LeaveCommand implements CommandExecutor {
     private final QueueManager queueManager;
+    private SpectateCommand spectateCommand;
 
     public LeaveCommand(QueueManager queueManager) {
         this.queueManager = queueManager;
+    }
+
+    public void setSpectateCommand(SpectateCommand spectateCommand) {
+        this.spectateCommand = spectateCommand;
     }
 
     @Override
@@ -19,6 +24,14 @@ public class LeaveCommand implements CommandExecutor {
             return true;
         }
         Player player = (Player) sender;
+        
+        // Check if spectating first
+        if (spectateCommand != null && spectateCommand.isSpectating(player.getUniqueId())) {
+            spectateCommand.removeSpectator(player);
+            player.sendMessage("§aYou are no longer spectating.");
+            return true;
+        }
+        
         if (queueManager.removeFromQueue(player.getUniqueId(), false)) {
             player.sendActionBar("");
             player.sendMessage("§aSuccessfully left all queue modes.");

@@ -38,6 +38,13 @@ public class Duel {
     private BukkitTask countdownTask;
     private int countdown;
     private boolean hungerActive = false;
+    
+    private DuelScoreboard scoreboardP1;
+    private DuelScoreboard scoreboardP2;
+    private BukkitTask scoreboardUpdateTask;
+    
+    private HealthNametag healthNametagP1;
+    private HealthNametag healthNametagP2;
 
     public Duel(PublicGoon plugin, DuelManager manager, Player p1, Player p2, GameModeConfig mode, World arena) {
         this.plugin = plugin;
@@ -96,6 +103,17 @@ public class Duel {
         if (round > 1) {
             a.playSound(a.getLocation(), Sound.ENTITY_BREEZE_SHOOT, 1f, 1f);
             b.playSound(b.getLocation(), Sound.ENTITY_BREEZE_SHOOT, 1f, 1f);
+        }
+
+        // Initialize scoreboards on first round
+        if (round == 1) {
+            scoreboardP1 = new DuelScoreboard(a, b, mode);
+            scoreboardP2 = new DuelScoreboard(b, a, mode);
+            startScoreboardUpdater();
+            
+            // Initialize health nametags
+            healthNametagP1 = new HealthNametag(plugin, b, a);
+            healthNametagP2 = new HealthNametag(plugin, a, b);
         }
 
         // Immediate first tick (shows "10")
@@ -172,6 +190,26 @@ public class Duel {
         }
     }
 
+    private void startScoreboardUpdater() {
+        scoreboardUpdateTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (phase == Phase.ENDED) {
+                    cancel();
+                    return;
+                }
+                Player a = Bukkit.getPlayer(p1);
+                Player b = Bukkit.getPlayer(p2);
+                if (a == null || b == null) {
+                    cancel();
+                    return;
+                }
+                if (scoreboardP1 != null) scoreboardP1.update(scoreP1, scoreP2, round);
+                if (scoreboardP2 != null) scoreboardP2.update(scoreP2, scoreP1, round);
+            }
+        }.runTaskTimer(plugin, 5L, 5L);
+    }
+
     public void handleLethal(Player loser) {
         if (phase != Phase.FIGHTING) return;
         phase = Phase.ROUND_ENDING;
@@ -240,6 +278,16 @@ public class Duel {
 
     private void endMatch(Player winner, Player loser, int sWinner, int sLoser) {
         phase = Phase.ENDED;
+        
+        // Clean up scoreboards
+        if (scoreboardUpdateTask != null) scoreboardUpdateTask.cancel();
+        if (scoreboardP1 != null) scoreboardP1.remove();
+        if (scoreboardP2 != null) scoreboardP2.remove();
+        
+        // Clean up health nametags
+        if (healthNametagP1 != null) healthNametagP1.remove();
+        if (healthNametagP2 != null) healthNametagP2.remove();
+        
         if (winner != null) {
             winner.sendTitle("§e§l\uD83C\uDFC6 VICTORY \uD83C\uDFC6", "§fScore: §c" + sWinner + " §7- §9" + sLoser, 10, 80, 20);
             winner.playSound(winner.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 1f);
@@ -265,7 +313,17 @@ public class Duel {
         UUID otherId = quitter.getUniqueId().equals(p1) ? p2 : p1;
         Player other = Bukkit.getPlayer(otherId);
         phase = Phase.ENDED;
+        
+        // Clean up scoreboards
         if (countdownTask != null) countdownTask.cancel();
+        if (scoreboardUpdateTask != null) scoreboardUpdateTask.cancel();
+        if (scoreboardP1 != null) scoreboardP1.remove();
+        if (scoreboardP2 != null) scoreboardP2.remove();
+        
+        // Clean up health nametags
+        if (healthNametagP1 != null) healthNametagP1.remove();
+        if (healthNametagP2 != null) healthNametagP2.remove();
+        
         if (other != null && other.isOnline()) {
             other.sendTitle("§e§l\uD83C\uDFC6 VICTORY \uD83C\uDFC6", "§fOpponent left the match.", 10, 80, 20);
             other.playSound(other.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 1f);
@@ -286,6 +344,11 @@ public class Duel {
         if (phase == Phase.ENDED) return;
         phase = Phase.ENDED;
         if (countdownTask != null) countdownTask.cancel();
+        if (scoreboardUpdateTask != null) scoreboardUpdateTask.cancel();
+        if (scoreboardP1 != null) scoreboardP1.remove();
+        if (scoreboardP2 != null) scoreboardP2.remove();
+        if (healthNametagP1 != null) healthNametagP1.remove();
+        if (healthNametagP2 != null) healthNametagP2.remove();
         teleportOut();
         manager.endDuel(this);
     }
@@ -340,14 +403,21 @@ public class Duel {
     }
 
     private void applyKit(Player p) {
-        if (mode == GameModeConfig.SWORD) {
-            ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
-            sword.addUnsafeEnchantment(Enchantment.UNBREAKING, 3);
-            p.getInventory().setItem(0, sword);
-            p.getInventory().setHelmet(armor(Material.DIAMOND_HELMET, 4));
-            p.getInventory().setChestplate(armor(Material.DIAMOND_CHESTPLATE, 4));
-            p.getInventory().setLeggings(armor(Material.DIAMOND_LEGGINGS, 3));
-            p.getInventory().setBoots(armor(Material.DIAMOND_BOOTS, 3));
+        // Check if player has a custom kit saved for this gamemode
+        KitConfig kitConfig = new KitConfig(plugin, p.getUniqueId(), mode);
+        if (kitConfig.hasKit()) {
+            kitConfig.applyKit(p.getInventory());
+        } else {
+            // Apply default kit
+            if (mode == GameModeConfig.SWORD) {
+                ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
+                sword.addUnsafeEnchantment(Enchantment.UNBREAKING, 3);
+                p.getInventory().setItem(0, sword);
+                p.getInventory().setHelmet(armor(Material.DIAMOND_HELMET, 4));
+                p.getInventory().setChestplate(armor(Material.DIAMOND_CHESTPLATE, 4));
+                p.getInventory().setLeggings(armor(Material.DIAMOND_LEGGINGS, 3));
+                p.getInventory().setBoots(armor(Material.DIAMOND_BOOTS, 3));
+            }
         }
     }
 

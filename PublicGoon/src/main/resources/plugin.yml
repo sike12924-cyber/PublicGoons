@@ -18,6 +18,9 @@ commands:
     description: Set the lobby spawn to your current location
     usage: /setlobby
     permission: publicgoon.admin
+  spectate:
+    description: Enter spectator mode
+    usage: /spectate
 permissions:
   publicgoon.admin:
     description: Allows configuring the PublicGoon plugin

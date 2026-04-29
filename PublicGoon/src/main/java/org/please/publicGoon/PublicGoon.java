@@ -16,6 +16,10 @@ public final class PublicGoon extends JavaPlugin {
     private LobbyProtectionListener lobbyProtectionListener;
     private DuelListener duelListener;
     private LeaveCommand leaveCommand;
+    private SpectateCommand spectateCommand;
+    private KitEditorGUI kitEditorGUI;
+    private KitLayoutGUI kitLayoutGUI;
+    private KitEditorListener kitEditorListener;
 
     @Override
     public void onEnable() {
@@ -40,11 +44,18 @@ public final class PublicGoon extends JavaPlugin {
         lobbyProtectionListener = new LobbyProtectionListener(lobbyManager);
         duelListener = new DuelListener(duelManager);
         leaveCommand = new LeaveCommand(queueManager);
+        spectateCommand = new SpectateCommand(this, duelManager);
+        leaveCommand.setSpectateCommand(spectateCommand);
+        kitEditorGUI = new KitEditorGUI(this);
+        kitLayoutGUI = new KitLayoutGUI(this);
+        kitEditorListener = new KitEditorListener(kitEditorGUI, kitLayoutGUI);
+        inventorySwords.setKitEditorGUI(kitEditorGUI);
 
         getCommand("queue").setExecutor(queueCommand);
         getCommand("lobby").setExecutor(lobbyCommand);
         getCommand("setlobby").setExecutor(lobbyCommand);
         getCommand("leave").setExecutor(leaveCommand);
+        getCommand("spectate").setExecutor(spectateCommand);
 
         // Events
         getServer().getPluginManager().registerEvents(queueCommand, this);
@@ -53,6 +64,7 @@ public final class PublicGoon extends JavaPlugin {
         getServer().getPluginManager().registerEvents(lobbyListener, this);
         getServer().getPluginManager().registerEvents(lobbyProtectionListener, this);
         getServer().getPluginManager().registerEvents(duelListener, this);
+        getServer().getPluginManager().registerEvents(kitEditorListener, this);
 
         getLogger().info("PublicGoon PvP Queue Plugin enabled!");
     }

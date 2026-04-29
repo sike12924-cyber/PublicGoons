@@ -13,9 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainInventoryGUI {
-    public static final String TITLE = "§9\u2694 Queue Duels";
-    private static final int SIZE = 27;
-    private static final int[] SLOTS = {10, 11, 12, 13, 19, 20, 21, 22};
+    public static final String TITLE = "§9§l⚔ Queue Duels";
+    private static final int SIZE = 45;
+    private static final int[] SLOTS = {11, 12, 13, 14, 20, 21, 22, 23};
 
     private final QueueManager queueManager;
     private final DuelManager duelManager;
@@ -27,8 +27,18 @@ public class MainInventoryGUI {
 
     public void open(Player player) {
         Inventory gui = Bukkit.createInventory(null, SIZE, TITLE);
-        ItemStack glass = glass();
-        for (int i = 0; i < SIZE; i++) gui.setItem(i, glass);
+        
+        // Fill with decorative glass
+        ItemStack borderGlass = borderGlass();
+        ItemStack fillerGlass = fillerGlass();
+        
+        for (int i = 0; i < SIZE; i++) {
+            if (i < 9 || i >= 36 || i % 9 == 0 || i % 9 == 8) {
+                gui.setItem(i, borderGlass);
+            } else {
+                gui.setItem(i, fillerGlass);
+            }
+        }
 
         GameModeConfig[] modes = GameModeConfig.values();
         for (int i = 0; i < SLOTS.length && i < modes.length; i++) {
@@ -49,9 +59,12 @@ public class MainInventoryGUI {
         if (meta != null) {
             meta.setDisplayName("§b§l" + mode.displayName);
             int active = countActiveFor(mode);
-            String circle = (mode.enabled && active > 0) ? "§a\u25CF" : "§c\u25CF";
+            String circle = (mode.enabled && active > 0) ? "§a●" : "§c●";
             List<String> lore = new ArrayList<>();
-            lore.add(circle + " §f" + active + " active players §8(EU)");
+            lore.add("");
+            lore.add("§7Players: " + circle + " §f" + active + " §8(EU)");
+            lore.add("§7Rounds: §f" + mode.rounds);
+            lore.add("§7Arena: §f" + mode.size.name());
             if (!mode.enabled) {
                 lore.add("");
                 lore.add("§c§lComing Soon");
@@ -63,8 +76,19 @@ public class MainInventoryGUI {
         return item;
     }
 
-    private ItemStack glass() {
-        ItemStack pane = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+    private ItemStack borderGlass() {
+        ItemStack pane = new ItemStack(Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+        ItemMeta meta = pane.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(" ");
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            pane.setItemMeta(meta);
+        }
+        return pane;
+    }
+
+    private ItemStack fillerGlass() {
+        ItemStack pane = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta meta = pane.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(" ");

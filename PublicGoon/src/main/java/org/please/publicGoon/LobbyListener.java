@@ -11,6 +11,7 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class LobbyListener implements Listener {
@@ -81,6 +82,8 @@ public class LobbyListener implements Listener {
 
     private void applyLobbyState(Player player) {
         if (lobbyManager.isInLobby(player)) {
+            player.getInventory().clear();
+            player.getInventory().setArmorContents(new ItemStack[4]);
             player.setGameMode(GameMode.ADVENTURE);
             player.setFoodLevel(20);
             player.setSaturation(20f);
