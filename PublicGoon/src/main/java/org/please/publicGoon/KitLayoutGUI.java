@@ -2,24 +2,37 @@ package org.please.publicGoon;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class KitLayoutGUI {
     private final PublicGoon plugin;
-    private GameModeConfig currentMode;
+    /** Per-player mode currently being edited, so concurrent users don't clash. */
+    private final Map<UUID, GameModeConfig> currentModes = new HashMap<>();
 
     public KitLayoutGUI(PublicGoon plugin) {
         this.plugin = plugin;
     }
 
+    public GameModeConfig getCurrentMode(Player player) {
+        return currentModes.get(player.getUniqueId());
+    }
+
+    public void clearMode(Player player) {
+        currentModes.remove(player.getUniqueId());
+    }
+
     public void open(Player player, GameModeConfig mode) {
-        this.currentMode = mode;
+        currentModes.put(player.getUniqueId(), mode);
         Inventory gui = Bukkit.createInventory(null, 54, "§e✎ Kit Editor - " + mode.displayName);
 
         // Add save button
@@ -92,24 +105,26 @@ public class KitLayoutGUI {
     }
 
     public void handleInventoryClick(Player player, int slot, ItemStack item) {
-        if (slot == 49) {
-            // Save button
-            KitConfig kitConfig = new KitConfig(plugin, player.getUniqueId(), currentMode);
-            
-            // Create temporary inventory to save from
-            Inventory tempInv = Bukkit.createInventory(null, 54);
-            for (int i = 0; i < 36; i++) {
-                tempInv.setItem(i, player.getOpenInventory().getTopInventory().getItem(i));
-            }
-            // Save armor from the armor slots (39, 38, 37, 36)
-            tempInv.setItem(39, player.getOpenInventory().getTopInventory().getItem(39));
-            tempInv.setItem(38, player.getOpenInventory().getTopInventory().getItem(38));
-            tempInv.setItem(37, player.getOpenInventory().getTopInventory().getItem(37));
-            tempInv.setItem(36, player.getOpenInventory().getTopInventory().getItem(36));
-            
-            kitConfig.saveKit(tempInv);
-            player.sendMessage("§aKit saved for " + currentMode.displayName + "!");
+        if (slot != 49) return;
+        GameModeConfig mode = currentModes.get(player.getUniqueId());
+        if (mode == null) {
             player.closeInventory();
+            return;
         }
+        Inventory top = player.getOpenInventory().getTopInventory();
+        // Snapshot the current top inventory into a transfer holder
+        Inventory tempInv = Bukkit.createInventory(null, 54);
+        for (int i = 0; i < 36; i++) tempInv.setItem(i, top.getItem(i));
+        tempInv.setItem(36, top.getItem(36));
+        tempInv.setItem(37, top.getItem(37));
+        tempInv.setItem(38, top.getItem(38));
+        tempInv.setItem(39, top.getItem(39));
+
+        KitConfig kitConfig = new KitConfig(plugin, player.getUniqueId(), mode);
+        kitConfig.saveKit(tempInv);
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
+        player.sendMessage("§a§l» §7Kit saved for §f" + mode.displayName + "§7.");
+        clearMode(player);
+        player.closeInventory();
     }
 }

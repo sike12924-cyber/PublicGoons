@@ -107,13 +107,13 @@ public class Duel {
 
         // Initialize scoreboards on first round
         if (round == 1) {
-            scoreboardP1 = new DuelScoreboard(a, b, mode);
-            scoreboardP2 = new DuelScoreboard(b, a, mode);
+            scoreboardP1 = new DuelScoreboard(a, b, mode, true);   // p1 = blue
+            scoreboardP2 = new DuelScoreboard(b, a, mode, false);  // p2 = red
             startScoreboardUpdater();
             
-            // Initialize health nametags
-            healthNametagP1 = new HealthNametag(plugin, b, a);
-            healthNametagP2 = new HealthNametag(plugin, a, b);
+            // Initialize health nametags - one per player, visible to everyone.
+            healthNametagP1 = new HealthNametag(plugin, a);
+            healthNametagP2 = new HealthNametag(plugin, b);
         }
 
         // Immediate first tick (shows "10")
@@ -159,15 +159,24 @@ public class Duel {
         if (!readied.add(p.getUniqueId())) return;
 
         // Confirmation sound for both players when one of them readies up
-        Player a = Bukkit.getPlayer(p1);
-        Player b = Bukkit.getPlayer(p2);
+        final Player a = Bukkit.getPlayer(p1);
+        final Player b = Bukkit.getPlayer(p2);
         for (Player pl : new Player[]{a, b}) {
             if (pl != null) pl.playSound(pl.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
         }
 
         if (readied.size() >= 2) {
+            // Show the 2/2 confirmation briefly before launching the fight.
+            for (Player pl : new Player[]{a, b}) {
+                if (pl != null) pl.sendActionBar("§eLeft Shift: §fSkip countdown §a✓ §7(2/2)");
+            }
             if (countdownTask != null) countdownTask.cancel();
-            go();
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (phase == Phase.COUNTDOWN) go();
+                }
+            }.runTaskLater(plugin, 12L);
         } else {
             // Refresh display immediately
             Player other = Bukkit.getPlayer(p.getUniqueId().equals(p1) ? p2 : p1);
@@ -239,10 +248,14 @@ public class Duel {
         boolean matchOver = sWinner >= mode.rounds;
 
         if (!matchOver) {
-            // Titles
+            // Titles + sounds
             loser.sendTitle("§4§lRound Lost", "§fScore: §9" + sLoser + " §7- §c" + sWinner, 5, 40, 10);
+            loser.playSound(loser.getLocation(), Sound.ENTITY_BLAZE_DEATH, 1f, 1f);
+            loser.playSound(loser.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.6f, 0.7f);
             if (winner != null) {
                 winner.sendTitle("§a§lRound Won", "§fScore: §9" + sWinner + " §7- §c" + sLoser, 5, 40, 10);
+                winner.playSound(winner.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
+                winner.playSound(winner.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.6f);
             }
             sendRoundChat(winner, loser, sWinner, sLoser);
 

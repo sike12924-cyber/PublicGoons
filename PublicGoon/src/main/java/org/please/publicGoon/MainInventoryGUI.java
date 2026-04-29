@@ -15,7 +15,8 @@ import java.util.List;
 public class MainInventoryGUI {
     public static final String TITLE = "§9§l⚔ Queue Duels";
     private static final int SIZE = 45;
-    private static final int[] SLOTS = {11, 12, 13, 14, 20, 21, 22, 23};
+    // Rows 1 and 3 of a 5-row menu, columns 1,3,5,7 -> perfectly symmetric, centered.
+    private static final int[] SLOTS = {10, 12, 14, 16, 28, 30, 32, 34};
 
     private final QueueManager queueManager;
     private final DuelManager duelManager;

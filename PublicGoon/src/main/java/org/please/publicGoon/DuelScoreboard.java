@@ -4,130 +4,160 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+/**
+ * Per-viewer duel sidebar in the PVP GOONS theme.
+ *
+ * Layout (top to bottom):
+ *   PVP GOONS   (objective title)
+ *   §9/§c🚩 viewerName
+ *   §7ℹ Score: §9 self §7- §c opp
+ *   (blank)
+ *   §8⌚ %server_time_d/L/y%
+ *   §7→ %player_world% §8(§7%ping%ms§8)
+ *   (blank)
+ *   §6pvpgoons.elytra.top
+ *
+ * Lines are anchored to seven invisible entries owned by seven scoreboard teams;
+ * we only mutate each team's prefix on update, so values change in place without
+ * the classic flicker caused by removing & re-adding score entries.
+ */
 public class DuelScoreboard {
     private final Scoreboard scoreboard;
     private final Objective objective;
-    private final Player player;
+    private final Player viewer;
     private final Player opponent;
     private final GameModeConfig mode;
-    
-    private Score timeScore;
-    private Score opponentScore;
-    private Score pingScore;
-    private Score yourHealthScore;
-    private Score opponentHealthScore;
-    private Score roundScore;
-    private Score blank1;
-    private Score blank2;
-    
-    private long startTime;
-    
-    private String lastTimeText;
-    private String lastPingText;
-    private String lastYourHealthText;
-    private String lastOpponentHealthText;
-    private String lastRoundText;
-    
-    public DuelScoreboard(Player player, Player opponent, GameModeConfig mode) {
-        this.player = player;
+    private final boolean isBlue;
+
+    // Anchor entries (one per row). Each is a unique color sequence which renders
+    // as effectively-empty text, so the actual line content lives in the team prefix.
+    private static final String[] ANCHORS = {
+            "§0§r", "§1§r", "§2§r", "§3§r", "§4§r", "§5§r", "§6§r"
+    };
+
+    public DuelScoreboard(Player viewer, Player opponent, GameModeConfig mode) {
+        this(viewer, opponent, mode, true);
+    }
+
+    public DuelScoreboard(Player viewer, Player opponent, GameModeConfig mode, boolean isBlue) {
+        this.viewer = viewer;
         this.opponent = opponent;
         this.mode = mode;
+        this.isBlue = isBlue;
         this.scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
-        
-        this.objective = scoreboard.registerNewObjective("duel", "dummy", "§9§l⚔ DUEL");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        
-        initializeScores();
-        this.startTime = System.currentTimeMillis();
-        
-        player.setScoreboard(scoreboard);
+        this.objective = scoreboard.registerNewObjective("pvpgoons", "dummy", title());
+        this.objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        hideScoreNumbers(this.objective);
+        initLines();
+        viewer.setScoreboard(scoreboard);
+        // Initial paint so the board has data the moment it appears.
+        update(0, 0, 1);
     }
-    
-    private void initializeScores() {
-        blank1 = objective.getScore(" ");
-        blank1.setScore(8);
-        
-        opponentScore = objective.getScore("§eOpponent: §f" + opponent.getName());
-        opponentScore.setScore(7);
-        
-        pingScore = objective.getScore("§7Ping: §f" + getPing() + "ms");
-        pingScore.setScore(6);
-        
-        blank2 = objective.getScore("  ");
-        blank2.setScore(5);
-        
-        yourHealthScore = objective.getScore("§aYour HP: §f" + getHealth(player));
-        yourHealthScore.setScore(4);
-        
-        opponentHealthScore = objective.getScore("§cTheir HP: §f" + getHealth(opponent));
-        opponentHealthScore.setScore(3);
-        
-        roundScore = objective.getScore("§7Round: §f-");
-        roundScore.setScore(2);
-        
-        timeScore = objective.getScore("§7Time: §f0:00");
-        timeScore.setScore(1);
+
+    private static String hex(String h) {
+        StringBuilder s = new StringBuilder("§x");
+        for (char c : h.toUpperCase().toCharArray()) s.append('§').append(c);
+        return s.toString();
     }
-    
-    public void update(int scoreP1, int scoreP2, int round) {
-        // Update time
-        long elapsed = System.currentTimeMillis() - startTime;
-        int seconds = (int) (elapsed / 1000);
-        int minutes = seconds / 60;
-        int secs = seconds % 60;
-        String timeText = "§7Time: §f" + minutes + ":" + String.format("%02d", secs);
-        if (lastTimeText != null) scoreboard.resetScores(lastTimeText);
-        timeScore = objective.getScore(timeText);
-        timeScore.setScore(1);
-        lastTimeText = timeText;
-        
-        // Update ping
-        String pingText = "§7Ping: §f" + getPing() + "ms";
-        if (lastPingText != null) scoreboard.resetScores(lastPingText);
-        pingScore = objective.getScore(pingText);
-        pingScore.setScore(6);
-        lastPingText = pingText;
-        
-        // Update health
-        String yourHealthText = "§aYour HP: §f" + getHealth(player);
-        if (lastYourHealthText != null) scoreboard.resetScores(lastYourHealthText);
-        yourHealthScore = objective.getScore(yourHealthText);
-        yourHealthScore.setScore(4);
-        lastYourHealthText = yourHealthText;
-        
-        String opponentHealthText = "§cTheir HP: §f" + getHealth(opponent);
-        if (lastOpponentHealthText != null) scoreboard.resetScores(lastOpponentHealthText);
-        opponentHealthScore = objective.getScore(opponentHealthText);
-        opponentHealthScore.setScore(3);
-        lastOpponentHealthText = opponentHealthText;
-        
-        // Update round/score
-        String scoreText = "§f" + scoreP1 + " §7- §f" + scoreP2;
-        String roundText = "§7Score: " + scoreText + " §7(Round " + round + ")";
-        if (lastRoundText != null) scoreboard.resetScores(lastRoundText);
-        roundScore = objective.getScore(roundText);
-        roundScore.setScore(2);
-        lastRoundText = roundText;
+
+    private static String title() {
+        // &l<#CCCCCC>PVP&r &#E38200&lG&#B46700&lO&#854C00&lO&#553100&lN&#261600&lS
+        return hex("CCCCCC") + "§lPVP§r "
+                + hex("E38200") + "§lG"
+                + hex("B46700") + "§lO"
+                + hex("854C00") + "§lO"
+                + hex("553100") + "§lN"
+                + hex("261600") + "§lS";
     }
-    
-    private int getPing() {
-        try {
-            Object entityPlayer = opponent.getClass().getMethod("getHandle").invoke(opponent);
-            return (int) entityPlayer.getClass().getField("ping").get(entityPlayer);
-        } catch (Exception e) {
-            return -1;
+
+    private void initLines() {
+        for (int i = 0; i < ANCHORS.length; i++) {
+            String entry = ANCHORS[i];
+            Team team = scoreboard.registerNewTeam("pvpgoons_line" + i);
+            team.addEntry(entry);
+            // Top row (i = 0) gets the highest score so it renders at the top.
+            objective.getScore(entry).setScore(ANCHORS.length - i);
         }
     }
-    
-    private double getHealth(Player p) {
-        if (p == null || !p.isOnline()) return 0;
-        return Math.round(p.getHealth() * 10.0) / 10.0;
+
+    private void setLine(int idx, String content) {
+        Team team = scoreboard.getTeam("pvpgoons_line" + idx);
+        if (team == null) return;
+        team.setPrefix(content == null ? "" : content);
     }
-    
+
+    public void update(int selfScore, int oppScore, int round) {
+        if (viewer == null || !viewer.isOnline()) return;
+
+        String selfColor = isBlue ? "§9" : "§c";
+        String oppColor = isBlue ? "§c" : "§9";
+
+        setLine(0, selfColor + "§l\uD83D\uDEA9 §r" + selfColor + viewer.getName());
+        setLine(1, "§7\u2139 Score: " + selfColor + selfScore + " §7- " + oppColor + oppScore);
+        setLine(2, " ");
+        setLine(3, "§8\u231A " + resolve(viewer, "%server_time_d/L/y%"));
+        setLine(4, "§7\u2192 " + resolve(viewer, "%player_world%") + " §8(§7" + getPing(viewer) + "ms§8)");
+        setLine(5, "  ");
+        setLine(6, "§6pvpgoons.elytra.top");
+    }
+
     public void remove() {
-        player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+        if (viewer != null && viewer.isOnline()) {
+            viewer.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+        }
+    }
+
+    private static boolean hasPAPI() {
+        return Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null;
+    }
+
+    /** Resolve placeholders via PlaceholderAPI when present, otherwise via a manual fallback. */
+    private static String resolve(Player player, String text) {
+        if (text == null || text.isEmpty()) return text;
+        if (hasPAPI()) {
+            try {
+                Class<?> papi = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
+                return (String) papi.getMethod("setPlaceholders", Player.class, String.class)
+                        .invoke(null, player, text);
+            } catch (Throwable ignored) {
+                // Fall through to manual replacement.
+            }
+        }
+        String date = new SimpleDateFormat("d/L/y").format(new Date());
+        String world = player.getWorld() != null ? player.getWorld().getName() : "?";
+        int ping = getPing(player);
+        return text
+                .replace("%server_time_d/L/y%", date)
+                .replace("%player_world%", world)
+                .replace("%ping%", String.valueOf(ping));
+    }
+
+    private static int getPing(Player p) {
+        if (p == null) return 0;
+        try {
+            return p.getPing(); // Paper 1.17+
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /**
+     * Hide the right-side score numbers using Paper's NumberFormat API (1.20.3+).
+     * Falls back silently on older builds where the API isn't available.
+     */
+    private static void hideScoreNumbers(Objective objective) {
+        try {
+            Class<?> nfClass = Class.forName("org.bukkit.scoreboard.NumberFormat");
+            Object blank = nfClass.getMethod("blank").invoke(null);
+            objective.getClass().getMethod("numberFormat", nfClass).invoke(objective, blank);
+        } catch (Throwable ignored) {
+            // Number formatting not supported on this server; numbers will remain visible.
+        }
     }
 }

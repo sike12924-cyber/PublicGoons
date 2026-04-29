@@ -10,7 +10,7 @@ public enum GameModeConfig {
     NETHOP("NethOP", Material.NETHERITE_SWORD, ArenaSize.SMALL, 1, false, false),
     DIAPOT("DiaPot", Material.SPLASH_POTION, ArenaSize.SMALL, 2, false, false),
     SMP("SMP", Material.IRON_SWORD, ArenaSize.AVERAGE, 1, false, false),
-    VANILLA("Vanilla", Material.GRASS_BLOCK, ArenaSize.AVERAGE, 1, false, false);
+    VANILLA("Vanilla", Material.END_CRYSTAL, ArenaSize.AVERAGE, 1, false, false);
 
     public final String displayName;
     public final Material icon;
