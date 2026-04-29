@@ -6,65 +6,61 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public class QueueManager {
     private final PublicGoon plugin;
+    private DuelManager duelManager; // injected post-construction
     private final Map<UUID, QueueEntry> playerQueues = new HashMap<>();
-    // queueKey -> ordered player ids (FIFO)
-    private final Map<String, Deque<UUID>> queues = new LinkedHashMap<>();
+    private final Map<GameModeConfig, Deque<UUID>> queues = new EnumMap<>(GameModeConfig.class);
 
     public QueueManager(PublicGoon plugin) {
         this.plugin = plugin;
+        for (GameModeConfig g : GameModeConfig.values()) queues.put(g, new ArrayDeque<>());
         startActionBarUpdater();
         startMatchmakingTask();
     }
 
-    private static String key(String gameMode, boolean ranked) {
-        return (ranked ? "r:" : "n:") + gameMode.toLowerCase();
+    public void setDuelManager(DuelManager duelManager) {
+        this.duelManager = duelManager;
     }
 
-    public boolean addToQueue(Player player, String gameMode, boolean ranked) {
-        UUID playerId = player.getUniqueId();
-
-        if (playerQueues.containsKey(playerId)) {
-            player.sendMessage("§cYou are already in a queue! Use /queue leave to exit.");
+    public boolean addToQueue(Player player, GameModeConfig mode) {
+        if (mode == null) return false;
+        if (!mode.enabled) {
+            player.sendMessage("§c§l» §7" + mode.displayName + " is coming soon.");
             return false;
         }
-
-        if (!isValidGameMode(gameMode)) {
-            player.sendMessage("§cInvalid game mode!");
+        UUID id = player.getUniqueId();
+        if (playerQueues.containsKey(id)) {
+            player.sendMessage("§cYou are already in a queue. Use §f/leave§c to exit.");
             return false;
         }
-
-        QueueEntry entry = new QueueEntry(playerId, gameMode.toLowerCase(), ranked, System.currentTimeMillis());
-        playerQueues.put(playerId, entry);
-        queues.computeIfAbsent(key(entry.gameMode, ranked), k -> new ArrayDeque<>()).addLast(playerId);
-
-        String queueType = ranked ? "§6Ranked" : "§aNormal";
-        player.sendMessage("§a§l» §7Joined " + queueType + " §f" + gameMode.toUpperCase() + " §7queue. §7(§f" + getQueueSize(entry.gameMode, ranked) + " §7waiting)");
+        if (duelManager != null && duelManager.inDuel(id)) {
+            player.sendMessage("§cYou are already in a duel.");
+            return false;
+        }
+        QueueEntry entry = new QueueEntry(id, mode, System.currentTimeMillis());
+        playerQueues.put(id, entry);
+        queues.get(mode).addLast(id);
+        player.sendMessage("§a§l» §7Joined §f" + mode.displayName + " §7queue. §8(§f" + queues.get(mode).size() + " §7waiting§8)");
         return true;
-    }
-
-    public boolean removeFromQueue(Player player) {
-        return removeFromQueue(player.getUniqueId(), true);
     }
 
     public boolean removeFromQueue(UUID playerId, boolean notify) {
         QueueEntry entry = playerQueues.remove(playerId);
         if (entry == null) return false;
-
-        Deque<UUID> q = queues.get(key(entry.gameMode, entry.ranked));
+        Deque<UUID> q = queues.get(entry.mode);
         if (q != null) q.remove(playerId);
-
         if (notify) {
             Player p = Bukkit.getPlayer(playerId);
             if (p != null && p.isOnline()) {
-                p.sendMessage("§c§l» §7You left the queue.");
+                p.sendActionBar("");
+                p.sendMessage("§aSuccessfully left all queue modes.");
             }
         }
         return true;
@@ -74,28 +70,24 @@ public class QueueManager {
         return playerQueues.get(playerId);
     }
 
-    public int getQueueCount(String gameMode) {
-        return getQueueSize(gameMode, false) + getQueueSize(gameMode, true);
-    }
-
-    public int getQueueSize(String gameMode, boolean ranked) {
-        Deque<UUID> q = queues.get(key(gameMode, ranked));
+    public int getQueueCount(GameModeConfig mode) {
+        Deque<UUID> q = queues.get(mode);
         return q == null ? 0 : q.size();
     }
 
-    private boolean isValidGameMode(String gameMode) {
-        return gameMode.equalsIgnoreCase("axe")
-                || gameMode.equalsIgnoreCase("uhc")
-                || gameMode.equalsIgnoreCase("sword");
+    // Legacy helper kept for older GUI files (accepts string name)
+    public int getQueueCount(String gameMode) {
+        GameModeConfig mode = GameModeConfig.fromName(gameMode);
+        return mode == null ? 0 : getQueueCount(mode);
     }
 
     private void startMatchmakingTask() {
         new BukkitRunnable() {
             @Override
             public void run() {
-                for (Map.Entry<String, Deque<UUID>> e : queues.entrySet()) {
+                for (Map.Entry<GameModeConfig, Deque<UUID>> e : queues.entrySet()) {
                     Deque<UUID> q = e.getValue();
-                    // Drop offline players first
+                    // Drop offline players
                     Iterator<UUID> it = q.iterator();
                     while (it.hasNext()) {
                         UUID id = it.next();
@@ -105,43 +97,20 @@ public class QueueManager {
                             playerQueues.remove(id);
                         }
                     }
-                    while (q.size() >= 2) {
-                        UUID a = q.pollFirst();
-                        UUID b = q.pollFirst();
-                        if (a == null || b == null) break;
-                        QueueEntry ea = playerQueues.remove(a);
-                        QueueEntry eb = playerQueues.remove(b);
-                        Player pa = Bukkit.getPlayer(a);
-                        Player pb = Bukkit.getPlayer(b);
-                        if (ea == null || eb == null || pa == null || pb == null) {
-                            // Re-queue any survivors
-                            if (pa != null && ea != null) { playerQueues.put(a, ea); q.addFirst(a); }
-                            if (pb != null && eb != null) { playerQueues.put(b, eb); q.addFirst(b); }
-                            break;
-                        }
-                        announceMatch(pa, pb, ea);
+                    while (q.size() >= 2 && duelManager != null) {
+                        UUID aId = q.pollFirst();
+                        UUID bId = q.pollFirst();
+                        if (aId == null || bId == null) break;
+                        playerQueues.remove(aId);
+                        playerQueues.remove(bId);
+                        Player a = Bukkit.getPlayer(aId);
+                        Player b = Bukkit.getPlayer(bId);
+                        if (a == null || b == null) continue;
+                        duelManager.startMatch(a, b, e.getKey());
                     }
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
-    }
-
-    private void announceMatch(Player a, Player b, QueueEntry entry) {
-        String mode = entry.gameMode.substring(0, 1).toUpperCase() + entry.gameMode.substring(1);
-        String type = entry.ranked ? "§6Ranked" : "§aNormal";
-        String header = "§8§m                    §r §d§lMATCH FOUND §8§m                    ";
-        for (Player p : new Player[]{a, b}) {
-            Player opp = (p == a) ? b : a;
-            p.sendMessage("");
-            p.sendMessage(header);
-            p.sendMessage("§7Mode: " + type + " §f" + mode);
-            p.sendMessage("§7Opponent: §f" + opp.getName());
-            p.sendMessage("§eArenas are not yet available - you have been removed from the queue.");
-            p.sendMessage(header);
-            p.sendMessage("");
-            p.sendActionBar("§d§lMatch found vs §f" + opp.getName());
-            p.playSound(p.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
-        }
     }
 
     private void startActionBarUpdater() {
@@ -160,26 +129,17 @@ public class QueueManager {
 
     private void sendQueueActionBar(Player player, QueueEntry entry) {
         long secs = (System.currentTimeMillis() - entry.joinTime) / 1000;
-        String type = entry.ranked ? "§6Ranked" : "§aNormal";
-        String mode = entry.gameMode.substring(0, 1).toUpperCase() + entry.gameMode.substring(1);
-        int waiting = getQueueSize(entry.gameMode, entry.ranked);
-        String bar = String.format(
-                "§d§lQUEUE §8» %s §f%s §8| §7%ds §8| §f%d §7waiting",
-                type, mode, secs, waiting
-        );
-        player.sendActionBar(bar);
+        player.sendActionBar("§7\u231A Queued for 1 mode.. §f" + secs + "s §7- Use §f/leave §7to exit queue");
     }
 
     public static class QueueEntry {
         public final UUID playerId;
-        public final String gameMode;
-        public final boolean ranked;
+        public final GameModeConfig mode;
         public final long joinTime;
 
-        public QueueEntry(UUID playerId, String gameMode, boolean ranked, long joinTime) {
+        public QueueEntry(UUID playerId, GameModeConfig mode, long joinTime) {
             this.playerId = playerId;
-            this.gameMode = gameMode;
-            this.ranked = ranked;
+            this.mode = mode;
             this.joinTime = joinTime;
         }
     }

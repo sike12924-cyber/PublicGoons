@@ -1,7 +1,6 @@
 package org.please.publicGoon;
 
 import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -12,18 +11,17 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
-
 public class InventorySwords implements Listener {
+    public static final String SWORD_NAME = "§6\u2694 Queue Duels";
+    private static final int QUEUE_SLOT = 0;
+    private static final int OFFHAND_SLOT = 40;
+
     private final MainInventoryGUI mainInventoryGUI;
     private LobbyManager lobbyManager;
-    private final String ironSwordName = "§a§lNormal Game Modes";
-    private final String diamondSwordName = "§6§lRanked Game Modes";
-    private static final int OFFHAND_SLOT = 40;
 
     public InventorySwords(MainInventoryGUI mainInventoryGUI) {
         this.mainInventoryGUI = mainInventoryGUI;
@@ -33,43 +31,32 @@ public class InventorySwords implements Listener {
         this.lobbyManager = lobbyManager;
     }
 
+    private boolean inLobby(Player p) {
+        return lobbyManager != null && lobbyManager.isInLobby(p);
+    }
+
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
-        
         if (item == null || !item.hasItemMeta()) return;
-        
-        String itemName = item.getItemMeta().getDisplayName();
-        
-        if (itemName.equals(ironSwordName)) {
-            event.setCancelled(true);
-            if (!isAllowedHere(player)) return;
-            if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                mainInventoryGUI.getNormalGUI().openNormalGameModes(player);
-            }
-        } else if (itemName.equals(diamondSwordName)) {
-            event.setCancelled(true);
-            if (!isAllowedHere(player)) return;
-            if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                mainInventoryGUI.getRankedGUI().openRankedGameModes(player);
-            }
+        if (!isQueueSword(item)) return;
+
+        // Right-click in lobby opens the Queue Duels menu; outside lobby do nothing
+        if (!inLobby(player)) return;
+        event.setCancelled(true);
+        if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            mainInventoryGUI.open(player);
         }
     }
 
-    private boolean isAllowedHere(Player player) {
-        return lobbyManager == null || lobbyManager.isInLobby(player);
-    }
-
+    // Never let the queue sword deal damage
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Player) {
-            Player player = (Player) event.getDamager();
-            ItemStack weapon = player.getInventory().getItemInMainHand();
-            
-            if (isQueueSword(weapon)) {
-                event.setCancelled(true);
-            }
+        if (!(event.getDamager() instanceof Player)) return;
+        Player player = (Player) event.getDamager();
+        if (isQueueSword(player.getInventory().getItemInMainHand())) {
+            event.setCancelled(true);
         }
     }
 
@@ -78,7 +65,10 @@ public class InventorySwords implements Listener {
         if (!(event.getWhoClicked() instanceof Player)) return;
         Player player = (Player) event.getWhoClicked();
 
-        // Block placing queue swords into the offhand slot via shift-click / hotbar swap / number keys
+        // Restrictions apply only when the player is in the lobby world
+        if (!inLobby(player)) return;
+
+        // Block queue swords from being placed in the offhand slot or swapped to offhand
         if (event.getSlot() == OFFHAND_SLOT || event.getRawSlot() == OFFHAND_SLOT) {
             if (isQueueSword(event.getCurrentItem()) || isQueueSword(event.getCursor())) {
                 event.setCancelled(true);
@@ -98,8 +88,8 @@ public class InventorySwords implements Listener {
             return;
         }
 
-        // Prevent moving items into the reserved sword slots (0 and 1)
-        if (event.getSlot() == 0 || event.getSlot() == 1) {
+        // Reserved queue-sword slot (0) cannot be overwritten
+        if (event.getSlot() == QUEUE_SLOT) {
             if (!isQueueSword(event.getCurrentItem())) {
                 event.setCancelled(true);
                 giveSwordsToPlayer(player);
@@ -109,19 +99,20 @@ public class InventorySwords implements Listener {
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (event.getWhoClicked() instanceof Player) {
-            // Prevent dragging items over sword slots
-            for (Integer slot : event.getInventorySlots()) {
-                if (slot == 0 || slot == 1) {
-                    event.setCancelled(true);
-                    break;
-                }
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        Player player = (Player) event.getWhoClicked();
+        if (!inLobby(player)) return;
+        for (Integer slot : event.getInventorySlots()) {
+            if (slot == QUEUE_SLOT || slot == OFFHAND_SLOT) {
+                event.setCancelled(true);
+                return;
             }
         }
     }
 
     @EventHandler
     public void onPlayerDropItem(PlayerDropItemEvent event) {
+        if (!inLobby(event.getPlayer())) return;
         if (isQueueSword(event.getItemDrop().getItemStack())) {
             event.setCancelled(true);
         }
@@ -129,31 +120,19 @@ public class InventorySwords implements Listener {
 
     @EventHandler
     public void onEntityPickupItem(EntityPickupItemEvent event) {
-        if (event.getEntity() instanceof Player) {
-            Player player = (Player) event.getEntity();
-            // Prevent picking up items that would replace sword slots
-            if (player.getInventory().getHeldItemSlot() == 0 || player.getInventory().getHeldItemSlot() == 1) {
-                if (!isQueueSword(player.getInventory().getItem(player.getInventory().getHeldItemSlot()))) {
-                    giveSwordsToPlayer(player);
-                }
+        if (!(event.getEntity() instanceof Player)) return;
+        Player player = (Player) event.getEntity();
+        if (!inLobby(player)) return;
+        if (player.getInventory().getHeldItemSlot() == QUEUE_SLOT) {
+            if (!isQueueSword(player.getInventory().getItem(QUEUE_SLOT))) {
+                giveSwordsToPlayer(player);
             }
         }
     }
 
     public void giveSwordsToPlayer(Player player) {
-        // Only the world lobby has the queue swords
-        if (lobbyManager != null && !lobbyManager.isInLobby(player)) {
-            return;
-        }
-        // Give Iron Sword (Normal) to slot 0
-        ItemStack ironSword = createIronSword();
-        player.getInventory().setItem(0, ironSword);
-
-        // Give Diamond Sword (Ranked) to slot 1
-        ItemStack diamondSword = createDiamondSword();
-        player.getInventory().setItem(1, diamondSword);
-
-        // Make sure no queue sword exists in offhand
+        if (!inLobby(player)) return;
+        player.getInventory().setItem(QUEUE_SLOT, createQueueSword());
         if (isQueueSword(player.getInventory().getItemInOffHand())) {
             player.getInventory().setItemInOffHand(null);
         }
@@ -171,51 +150,21 @@ public class InventorySwords implements Listener {
         }
     }
 
-    private ItemStack createIronSword() {
+    private ItemStack createQueueSword() {
         ItemStack sword = new ItemStack(Material.IRON_SWORD);
         ItemMeta meta = sword.getItemMeta();
-        
         if (meta != null) {
-            meta.setDisplayName(ironSwordName);
-            meta.setLore(Arrays.asList(
-                "§7Right-click to open",
-                "§7Normal game modes",
-                "",
-                "§eCasual unranked matches"
-            ));
+            meta.setDisplayName(SWORD_NAME);
             meta.setUnbreakable(true);
-            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ENCHANTS);
             sword.setItemMeta(meta);
         }
-        
-        return sword;
-    }
-
-    private ItemStack createDiamondSword() {
-        ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
-        ItemMeta meta = sword.getItemMeta();
-        
-        if (meta != null) {
-            meta.setDisplayName(diamondSwordName);
-            meta.setLore(Arrays.asList(
-                "§7Right-click to open",
-                "§7Ranked game modes",
-                "",
-                "§eCompetitive ranked matches"
-            ));
-            meta.setUnbreakable(true);
-            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
-            sword.setItemMeta(meta);
-        }
-        
         return sword;
     }
 
     public boolean isQueueSword(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
-        
-        String itemName = item.getItemMeta().getDisplayName();
-        return itemName.equals(ironSwordName) || itemName.equals(diamondSwordName);
+        String name = item.getItemMeta().getDisplayName();
+        return name != null && name.equals(SWORD_NAME);
     }
 }

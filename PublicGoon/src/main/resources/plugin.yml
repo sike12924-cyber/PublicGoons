@@ -7,6 +7,9 @@ commands:
     description: Open the PvP queue selector
     usage: /queue [leave]
     aliases: [q]
+  leave:
+    description: Leave all active queues
+    usage: /leave
   lobby:
     description: Teleport to the lobby
     usage: /lobby
@@ -18,4 +21,9 @@ commands:
 permissions:
   publicgoon.admin:
     description: Allows configuring the PublicGoon plugin
+    default: op
+    children:
+      publicgoon.lobby.build: true
+  publicgoon.lobby.build:
+    description: Allows building, breaking and interacting with blocks in the lobby world
     default: op

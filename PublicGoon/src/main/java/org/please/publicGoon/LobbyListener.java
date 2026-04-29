@@ -89,7 +89,7 @@ public class LobbyListener implements Listener {
             // Outside lobby: remove queue swords / clear offhand if it has them
             inventorySwords.removeSwordsFromPlayer(player);
             // Ensure they don't keep the queue (no arena yet, but stay clean)
-            queueManager.removeFromQueue(player);
+            queueManager.removeFromQueue(player.getUniqueId(), false);
         }
     }
 }
