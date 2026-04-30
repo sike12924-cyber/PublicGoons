@@ -46,9 +46,6 @@ public class KitEditorGUI {
                 
                 List<String> lore = new ArrayList<>();
                 lore.add("");
-                lore.add("§7Rounds: §f" + mode.rounds);
-                lore.add("§7Arena: §f" + mode.size.name());
-                lore.add("");
                 lore.add("§eClick to edit kit");
                 meta.setLore(lore);
                 meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ATTRIBUTES, org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS, org.bukkit.inventory.ItemFlag.HIDE_UNBREAKABLE);

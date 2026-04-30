@@ -51,19 +51,19 @@ public class KitEditorListener implements Listener {
         Inventory top = event.getView().getTopInventory();
         Inventory clicked = event.getClickedInventory();
 
-        // Allow free rearranging within the top inventory
+        // Allow free rearranging within the top inventory (slots 0-48 except save button at 49)
         if (clicked != null && clicked.equals(top)) {
             // Block number key swaps that would move items to player inventory
-            ClickType click = event.getClick();
-            if (click == ClickType.NUMBER_KEY) {
+            if (event.getClick() == ClickType.NUMBER_KEY) {
                 event.setCancelled(true);
                 return;
             }
-            // Allow normal clicks and drags within the editor
+            // Allow all other interactions: left click, right click, shift click, drag, etc.
+            // This lets players pick up and move items freely within the kit editor
             return;
         }
 
-        // Block all interactions with bottom inventory or outside clicks
+        // Block all interactions with bottom inventory (player's own inventory) or outside clicks
         event.setCancelled(true);
     }
 

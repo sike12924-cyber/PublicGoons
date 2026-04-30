@@ -123,7 +123,7 @@ public class KitLayoutGUI {
         KitConfig kitConfig = new KitConfig(plugin, player.getUniqueId(), mode);
         kitConfig.saveKit(tempInv);
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-        player.sendMessage("§a§l» §7Kit saved for §f" + mode.displayName + "§7.");
+        player.sendActionBar("§aSuccessfully saved kit for " + mode.displayName);
         clearMode(player);
         player.closeInventory();
     }
