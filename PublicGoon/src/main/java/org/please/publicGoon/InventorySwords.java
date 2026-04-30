@@ -84,6 +84,21 @@ public class InventorySwords implements Listener {
         // Restrictions apply only when the player is in the lobby world
         if (!inLobby(player)) return;
 
+        // Block all number key swaps involving lobby items
+        if (event.getClick().name().contains("NUMBER_KEY")) {
+            ItemStack current = event.getCurrentItem();
+            if (isQueueSword(current) || isKitEditor(current)) {
+                event.setCancelled(true);
+                return;
+            }
+            // Also prevent swapping regular items into the reserved slots
+            int hotbarButton = event.getHotbarButton();
+            if (hotbarButton == QUEUE_SLOT || hotbarButton == KIT_EDITOR_SLOT) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+
         // Block queue swords and kit editor from being placed in the offhand slot or swapped to offhand
         if (event.getSlot() == OFFHAND_SLOT || event.getRawSlot() == OFFHAND_SLOT) {
             if (isQueueSword(event.getCurrentItem()) || isQueueSword(event.getCursor()) ||

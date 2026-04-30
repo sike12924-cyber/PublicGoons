@@ -17,13 +17,11 @@ import java.util.Date;
  *   PVP GOONS   (objective title)
  *   §9/§c🚩 viewerName
  *   §7ℹ Score: §9 self §7- §c opp
- *   (blank)
  *   §8⌚ %server_time_d/L/y%
  *   §7→ %player_world% §8(§7%ping%ms§8)
- *   (blank)
  *   §6pvpgoons.elytra.top
  *
- * Lines are anchored to seven invisible entries owned by seven scoreboard teams;
+ * Lines are anchored to five invisible entries owned by five scoreboard teams;
  * we only mutate each team's prefix on update, so values change in place without
  * the classic flicker caused by removing & re-adding score entries.
  */
@@ -38,7 +36,7 @@ public class DuelScoreboard {
     // Anchor entries (one per row). Each is a unique color sequence which renders
     // as effectively-empty text, so the actual line content lives in the team prefix.
     private static final String[] ANCHORS = {
-            "§0§r", "§1§r", "§2§r", "§3§r", "§4§r", "§5§r", "§6§r"
+            "§0§r", "§1§r", "§2§r", "§3§r", "§4§r"
     };
 
     public DuelScoreboard(Player viewer, Player opponent, GameModeConfig mode) {
@@ -100,11 +98,9 @@ public class DuelScoreboard {
 
         setLine(0, selfColor + "§l\uD83D\uDEA9 §r" + selfColor + viewer.getName());
         setLine(1, "§7\u2139 Score: " + selfColor + selfScore + " §7- " + oppColor + oppScore);
-        setLine(2, " ");
-        setLine(3, "§8\u231A " + resolve(viewer, "%server_time_d/L/y%"));
-        setLine(4, "§7\u2192 " + resolve(viewer, "%player_world%") + " §8(§7" + getPing(viewer) + "ms§8)");
-        setLine(5, "  ");
-        setLine(6, "§6pvpgoons.elytra.top");
+        setLine(2, "§8\u231A " + resolve(viewer, "%server_time_d/L/y%"));
+        setLine(3, "§7\u2192 " + resolve(viewer, "%player_world%") + " §8(§7" + getPing(viewer) + "ms§8)");
+        setLine(4, "§6pvpgoons.elytra.top");
     }
 
     public void remove() {

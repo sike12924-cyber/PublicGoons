@@ -63,9 +63,8 @@ public class MainInventoryGUI {
             String circle = (mode.enabled && active > 0) ? "§a●" : "§c●";
             List<String> lore = new ArrayList<>();
             lore.add("");
-            lore.add("§7Players: " + circle + " §f" + active + " §8(EU)");
-            lore.add("§7Rounds: §f" + mode.rounds);
-            lore.add("§7Arena: §f" + mode.size.name());
+            lore.add("§7Active Players: " + circle + " §f" + active);
+            lore.add("§7FT: §f" + mode.rounds);
             if (!mode.enabled) {
                 lore.add("");
                 lore.add("§c§lComing Soon");

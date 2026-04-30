@@ -51,36 +51,20 @@ public class KitEditorListener implements Listener {
         Inventory top = event.getView().getTopInventory();
         Inventory clicked = event.getClickedInventory();
 
-        // Click outside any inventory or in the player's own inventory: forbidden.
-        if (clicked == null || !clicked.equals(top)) {
-            event.setCancelled(true);
+        // Allow free rearranging within the top inventory
+        if (clicked != null && clicked.equals(top)) {
+            // Block number key swaps that would move items to player inventory
+            ClickType click = event.getClick();
+            if (click == ClickType.NUMBER_KEY) {
+                event.setCancelled(true);
+                return;
+            }
+            // Allow normal clicks and drags within the editor
             return;
         }
 
-        // Shift-click would move items between top and bottom -> forbidden.
-        if (event.isShiftClick()) {
-            event.setCancelled(true);
-            return;
-        }
-
-        // Hotbar number keys / offhand swap would swap into the player's inv -> forbidden.
-        ClickType click = event.getClick();
-        if (click == ClickType.NUMBER_KEY || click == ClickType.SWAP_OFFHAND) {
-            event.setCancelled(true);
-            return;
-        }
-
-        // Pressing Q (drop) inside the editor would lose the item -> forbidden.
-        InventoryAction action = event.getAction();
-        if (action == InventoryAction.DROP_ONE_SLOT
-                || action == InventoryAction.DROP_ALL_SLOT
-                || action == InventoryAction.DROP_ONE_CURSOR
-                || action == InventoryAction.DROP_ALL_CURSOR) {
-            event.setCancelled(true);
-            return;
-        }
-
-        // Free-form rearranging within the top inventory is allowed.
+        // Block all interactions with bottom inventory or outside clicks
+        event.setCancelled(true);
     }
 
     @EventHandler
