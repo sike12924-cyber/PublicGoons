@@ -81,6 +81,7 @@ public final class PublicGoon extends JavaPlugin {
         getServer().getPluginManager().registerEvents(duelListener, this);
         getServer().getPluginManager().registerEvents(spectateCommand, this);
         getServer().getPluginManager().registerEvents(kitEditorListener, this);
+        getServer().getPluginManager().registerEvents(profileListener, this);
         getServer().getPluginManager().registerEvents(friendListener, this);
 
         getLogger().info("PublicGoon PvP Queue Plugin enabled!");

@@ -29,7 +29,7 @@ public class ProfileGUI {
             gui.setItem(i, filler);
         }
 
-        // Player head in center (slot 13) - only item shown
+        // Player head in center (slot 13) - only item
         ItemStack head = createPlayerHead(target);
         gui.setItem(13, head);
 
@@ -62,8 +62,8 @@ public class ProfileGUI {
             List<String> lore = new ArrayList<>();
             lore.add("");
 
-            // Use PlaceholderAPI placeholders (LuckPerms for rank)
-            String rank = getPlaceholder(target, "%luckperms_prefix%");
+            // Use PlaceholderAPI placeholders - LuckPerms for rank
+            String rank = getPlaceholder(target, "%luckperms_primary_group%");
             String playtime = getPlaceholder(target, "%statistic_time_played%");
             String kills = getPlaceholder(target, "%statistic_player_kills%");
             String deaths = getPlaceholder(target, "%statistic_deaths%");

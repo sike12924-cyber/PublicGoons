@@ -13,6 +13,7 @@ public class ProfileListener implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         String title = e.getView().getTitle();
 
+        // Check if this is a profile GUI
         if (title.endsWith("'s Profile")) {
             e.setCancelled(true);
         }
@@ -23,6 +24,7 @@ public class ProfileListener implements Listener {
         if (!(e.getWhoClicked() instanceof Player)) return;
         String title = e.getView().getTitle();
 
+        // Check if this is a profile GUI
         if (title.endsWith("'s Profile")) {
             e.setCancelled(true);
         }
