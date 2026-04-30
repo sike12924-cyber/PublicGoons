@@ -7,10 +7,12 @@ import org.bukkit.entity.Player;
 
 public class LeaveCommand implements CommandExecutor {
     private final QueueManager queueManager;
+    private final DuelManager duelManager;
     private SpectateCommand spectateCommand;
 
-    public LeaveCommand(QueueManager queueManager) {
+    public LeaveCommand(QueueManager queueManager, DuelManager duelManager) {
         this.queueManager = queueManager;
+        this.duelManager = duelManager;
     }
 
     public void setSpectateCommand(SpectateCommand spectateCommand) {
@@ -24,14 +26,22 @@ public class LeaveCommand implements CommandExecutor {
             return true;
         }
         Player player = (Player) sender;
-        
-        // Check if spectating first
+
+        // Check if in a duel first - this ends the match
+        if (duelManager.inDuel(player.getUniqueId())) {
+            Duel duel = duelManager.getDuel(player.getUniqueId());
+            duel.handleQuit(player);
+            player.sendMessage("§aYou have left the duel.");
+            return true;
+        }
+
+        // Check if spectating
         if (spectateCommand != null && spectateCommand.isSpectating(player.getUniqueId())) {
             spectateCommand.removeSpectator(player);
             player.sendMessage("§aYou are no longer spectating.");
             return true;
         }
-        
+
         if (queueManager.removeFromQueue(player.getUniqueId(), false)) {
             player.sendActionBar("");
             player.sendMessage("§aSuccessfully left all queue modes.");

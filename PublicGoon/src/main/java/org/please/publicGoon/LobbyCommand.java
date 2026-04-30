@@ -7,9 +7,14 @@ import org.bukkit.entity.Player;
 
 public class LobbyCommand implements CommandExecutor {
     private final LobbyManager lobbyManager;
+    private DuelManager duelManager;
 
     public LobbyCommand(LobbyManager lobbyManager) {
         this.lobbyManager = lobbyManager;
+    }
+
+    public void setDuelManager(DuelManager duelManager) {
+        this.duelManager = duelManager;
     }
 
     @Override
@@ -32,6 +37,14 @@ public class LobbyCommand implements CommandExecutor {
         }
 
         // /lobby
+        // Check if in a duel first - this ends the match
+        if (duelManager != null && duelManager.inDuel(player.getUniqueId())) {
+            Duel duel = duelManager.getDuel(player.getUniqueId());
+            duel.handleQuit(player);
+            player.sendMessage("§aYou have left the duel and returned to the lobby.");
+            return true;
+        }
+
         if (!lobbyManager.hasLobby()) {
             player.sendMessage("§cThe lobby has not been set yet! Ask an admin to run /setlobby.");
             return true;

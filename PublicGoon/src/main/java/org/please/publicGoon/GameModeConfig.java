@@ -4,7 +4,7 @@ import org.bukkit.Material;
 
 public enum GameModeConfig {
     SWORD("Sword", Material.DIAMOND_SWORD, ArenaSize.SMALL, 2, false, true),
-    AXE("Axe", Material.IRON_AXE, ArenaSize.SMALL, 2, false, false),
+    AXE("Axe", Material.IRON_AXE, ArenaSize.SMALL, 2, false, true),
     MACE("Mace", Material.MACE, ArenaSize.AVERAGE, 1, false, false),
     UHC("UHC", Material.GOLDEN_APPLE, ArenaSize.SMALL, 1, true, false),
     NETHOP("NethOP", Material.NETHERITE_SWORD, ArenaSize.SMALL, 1, false, false),

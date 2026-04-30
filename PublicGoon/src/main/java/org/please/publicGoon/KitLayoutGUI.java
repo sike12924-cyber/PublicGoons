@@ -81,6 +81,18 @@ public class KitLayoutGUI {
             gui.setItem(38, armor(Material.DIAMOND_CHESTPLATE, 4));
             gui.setItem(37, armor(Material.DIAMOND_LEGGINGS, 3));
             gui.setItem(36, armor(Material.DIAMOND_BOOTS, 3));
+        } else if (mode == GameModeConfig.AXE) {
+            // Default axe kit
+            gui.setItem(0, new ItemStack(Material.DIAMOND_SWORD));
+            gui.setItem(1, new ItemStack(Material.ARROW, 6));
+            gui.setItem(2, new ItemStack(Material.DIAMOND_AXE));
+            gui.setItem(4, new ItemStack(Material.CROSSBOW));
+            gui.setItem(5, new ItemStack(Material.BOW));
+            gui.setItem(39, armor(Material.DIAMOND_HELMET, 4));
+            gui.setItem(38, armor(Material.DIAMOND_CHESTPLATE, 4));
+            gui.setItem(37, armor(Material.DIAMOND_LEGGINGS, 3));
+            gui.setItem(36, armor(Material.DIAMOND_BOOTS, 3));
+            gui.setItem(40, new ItemStack(Material.SHIELD));
         }
     }
 
@@ -123,7 +135,7 @@ public class KitLayoutGUI {
         KitConfig kitConfig = new KitConfig(plugin, player.getUniqueId(), mode);
         kitConfig.saveKit(tempInv);
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
-        player.sendMessage("§a§l» §7Kit saved for §f" + mode.displayName + "§7.");
+        player.sendActionBar("§aSuccessfully saved kit for " + mode.displayName);
         clearMode(player);
         player.closeInventory();
     }

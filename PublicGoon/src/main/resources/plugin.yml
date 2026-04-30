@@ -19,8 +19,16 @@ commands:
     usage: /setlobby
     permission: publicgoon.admin
   spectate:
-    description: Enter spectator mode
-    usage: /spectate
+    description: Enter spectator mode to watch a player
+    usage: /spectate <player>
+  profile:
+    description: View a player's profile
+    usage: /profile [player]
+  friend:
+    description: Manage friends
+    usage: /friend <add/remove/list/requests/accept/deny> [player]
+    aliases: [f]
+softdepend: [PlaceholderAPI, Vault]
 permissions:
   publicgoon.admin:
     description: Allows configuring the PublicGoon plugin

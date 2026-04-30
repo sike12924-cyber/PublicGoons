@@ -430,6 +430,17 @@ public class Duel {
                 p.getInventory().setChestplate(armor(Material.DIAMOND_CHESTPLATE, 4));
                 p.getInventory().setLeggings(armor(Material.DIAMOND_LEGGINGS, 3));
                 p.getInventory().setBoots(armor(Material.DIAMOND_BOOTS, 3));
+            } else if (mode == GameModeConfig.AXE) {
+                p.getInventory().setItem(0, new ItemStack(Material.DIAMOND_SWORD));
+                p.getInventory().setItem(1, new ItemStack(Material.ARROW, 6));
+                p.getInventory().setItem(2, new ItemStack(Material.DIAMOND_AXE));
+                p.getInventory().setItem(4, new ItemStack(Material.CROSSBOW));
+                p.getInventory().setItem(5, new ItemStack(Material.BOW));
+                p.getInventory().setHelmet(armor(Material.DIAMOND_HELMET, 4));
+                p.getInventory().setChestplate(armor(Material.DIAMOND_CHESTPLATE, 4));
+                p.getInventory().setLeggings(armor(Material.DIAMOND_LEGGINGS, 3));
+                p.getInventory().setBoots(armor(Material.DIAMOND_BOOTS, 3));
+                p.getInventory().setItemInOffHand(new ItemStack(Material.SHIELD));
             }
         }
     }
