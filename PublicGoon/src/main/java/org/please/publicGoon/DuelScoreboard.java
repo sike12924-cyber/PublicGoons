@@ -28,6 +28,7 @@ import java.util.Date;
 public class DuelScoreboard {
     private final Scoreboard scoreboard;
     private final Objective objective;
+    private Objective healthObj;
     private final Player viewer;
     private final Player opponent;
     private final GameModeConfig mode;
@@ -53,6 +54,11 @@ public class DuelScoreboard {
         this.objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         hideScoreNumbers(this.objective);
         initLines();
+        // Health below-name (disabled for AXE)
+        if (mode != GameModeConfig.AXE) {
+            healthObj = scoreboard.registerNewObjective("pvphealth", "dummy", "\u00a7c\u00a7l\u2764");
+            healthObj.setDisplaySlot(DisplaySlot.BELOW_NAME);
+        }
         viewer.setScoreboard(scoreboard);
         // Initial paint so the board has data the moment it appears.
         update(0, 0, 1);
@@ -101,6 +107,14 @@ public class DuelScoreboard {
         setLine(2, "§8\u231A " + resolve(viewer, "%server_time_d/L/y%"));
         setLine(3, "§7\u2192 " + resolve(viewer, "%player_world%") + " §8(§7" + getPing(viewer) + "ms§8)");
         setLine(4, "§6pvpgoons.elytra.top");
+    }
+
+    public void updateHealth(Player self, Player opp) {
+        if (healthObj == null) return;
+        if (self != null && self.isOnline())
+            healthObj.getScore(self.getName()).setScore((int) Math.round(self.getHealth()));
+        if (opp != null && opp.isOnline())
+            healthObj.getScore(opp.getName()).setScore((int) Math.round(opp.getHealth()));
     }
 
     public void remove() {

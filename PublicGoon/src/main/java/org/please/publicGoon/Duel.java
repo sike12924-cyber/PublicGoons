@@ -8,7 +8,9 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -42,9 +44,6 @@ public class Duel {
     private DuelScoreboard scoreboardP1;
     private DuelScoreboard scoreboardP2;
     private BukkitTask scoreboardUpdateTask;
-    
-    private HealthNametag healthNametagP1;
-    private HealthNametag healthNametagP2;
 
     public Duel(PublicGoon plugin, DuelManager manager, Player p1, Player p2, GameModeConfig mode, World arena) {
         this.plugin = plugin;
@@ -105,15 +104,14 @@ public class Duel {
             b.playSound(b.getLocation(), Sound.ENTITY_BREEZE_SHOOT, 1f, 1f);
         }
 
+        // Clear projectiles from the previous round
+        clearProjectiles();
+
         // Initialize scoreboards on first round
         if (round == 1) {
             scoreboardP1 = new DuelScoreboard(a, b, mode, true);   // p1 = blue
             scoreboardP2 = new DuelScoreboard(b, a, mode, false);  // p2 = red
             startScoreboardUpdater();
-            
-            // Initialize health nametags - one per player, visible to everyone.
-            healthNametagP1 = new HealthNametag(plugin, a);
-            healthNametagP2 = new HealthNametag(plugin, b);
         }
 
         // Immediate first tick (shows "10")
@@ -213,8 +211,14 @@ public class Duel {
                     cancel();
                     return;
                 }
-                if (scoreboardP1 != null) scoreboardP1.update(scoreP1, scoreP2, round);
-                if (scoreboardP2 != null) scoreboardP2.update(scoreP2, scoreP1, round);
+                if (scoreboardP1 != null) {
+                    scoreboardP1.update(scoreP1, scoreP2, round);
+                    scoreboardP1.updateHealth(a, b);
+                }
+                if (scoreboardP2 != null) {
+                    scoreboardP2.update(scoreP2, scoreP1, round);
+                    scoreboardP2.updateHealth(b, a);
+                }
             }
         }.runTaskTimer(plugin, 5L, 5L);
     }
@@ -289,6 +293,13 @@ public class Duel {
         }
     }
 
+    private void clearProjectiles() {
+        if (arena == null) return;
+        for (Entity e : arena.getEntities()) {
+            if (e instanceof Projectile) e.remove();
+        }
+    }
+
     private void endMatch(Player winner, Player loser, int sWinner, int sLoser) {
         phase = Phase.ENDED;
         
@@ -296,10 +307,6 @@ public class Duel {
         if (scoreboardUpdateTask != null) scoreboardUpdateTask.cancel();
         if (scoreboardP1 != null) scoreboardP1.remove();
         if (scoreboardP2 != null) scoreboardP2.remove();
-        
-        // Clean up health nametags
-        if (healthNametagP1 != null) healthNametagP1.remove();
-        if (healthNametagP2 != null) healthNametagP2.remove();
         
         if (winner != null) {
             winner.sendTitle("§e§l\uD83C\uDFC6 VICTORY \uD83C\uDFC6", "§fScore: §c" + sWinner + " §7- §9" + sLoser, 10, 80, 20);
@@ -333,10 +340,6 @@ public class Duel {
         if (scoreboardP1 != null) scoreboardP1.remove();
         if (scoreboardP2 != null) scoreboardP2.remove();
         
-        // Clean up health nametags
-        if (healthNametagP1 != null) healthNametagP1.remove();
-        if (healthNametagP2 != null) healthNametagP2.remove();
-        
         if (other != null && other.isOnline()) {
             other.sendTitle("§e§l\uD83C\uDFC6 VICTORY \uD83C\uDFC6", "§fOpponent left the match.", 10, 80, 20);
             other.playSound(other.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 1f);
@@ -360,8 +363,6 @@ public class Duel {
         if (scoreboardUpdateTask != null) scoreboardUpdateTask.cancel();
         if (scoreboardP1 != null) scoreboardP1.remove();
         if (scoreboardP2 != null) scoreboardP2.remove();
-        if (healthNametagP1 != null) healthNametagP1.remove();
-        if (healthNametagP2 != null) healthNametagP2.remove();
         teleportOut();
         manager.endDuel(this);
     }

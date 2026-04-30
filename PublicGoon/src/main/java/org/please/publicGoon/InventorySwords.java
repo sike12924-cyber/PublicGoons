@@ -84,6 +84,10 @@ public class InventorySwords implements Listener {
         // Restrictions apply only when the player is in the lobby world
         if (!inLobby(player)) return;
 
+        // Never interfere with the kit editor GUI
+        String viewTitle = event.getView().getTitle();
+        if (viewTitle != null && viewTitle.startsWith("§e✎ Kit Editor")) return;
+
         // Block all number key swaps involving lobby items
         if (event.getClick().name().contains("NUMBER_KEY")) {
             ItemStack current = event.getCurrentItem();

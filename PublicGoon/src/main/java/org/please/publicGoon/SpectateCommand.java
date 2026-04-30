@@ -64,6 +64,12 @@ public class SpectateCommand implements CommandExecutor, Listener {
             return true;
         }
 
+        // Check if trying to spectate yourself
+        if (target.getUniqueId().equals(player.getUniqueId())) {
+            player.sendMessage("§cYou Cannot Spectate Yourself.");
+            return true;
+        }
+
         // Check if target is in a duel
         if (!duelManager.inDuel(target.getUniqueId())) {
             player.sendMessage("§cThat player is not in a duel.");

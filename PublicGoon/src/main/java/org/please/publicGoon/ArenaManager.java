@@ -83,8 +83,8 @@ public class ArenaManager {
     public Location getSpawn(World world, ArenaSize size, int playerIndex) {
         // Known spawn points for small arenas
         if (size == ArenaSize.SMALL) {
-            if (playerIndex == 0) return new Location(world, -7.0, 158.0, 45.0, 180f, 0f);
-            return new Location(world, -7.0, 158.0, 5.5, 0f, 0f);
+            if (playerIndex == 0) return new Location(world, -7.5, 159.0, 4.5, 0f, 0f);   // SOUTH
+            return new Location(world, -7.5, 159.0, 44.5, 180f, 0f); // NORTH
         }
         // Fallback: world spawn
         Location spawn = world.getSpawnLocation();

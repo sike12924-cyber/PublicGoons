@@ -62,10 +62,11 @@ public class DuelManager {
 
         World arena = arenaManager.acquire(mode.size);
         if (arena == null) {
-            pendingMatches.addLast(new PendingMatch(a.getUniqueId(), b.getUniqueId(), mode, System.currentTimeMillis()));
             for (Player p : new Player[]{a, b}) {
                 if (p == null) continue;
-                p.sendMessage("§eAll arenas are currently busy. You'll be placed in the next open one.");
+                p.sendTitle("§c§lNo Arena Available", "§7Rejoin the queue to try again.", 5, 60, 15);
+                p.sendActionBar("§c§lYou were kicked from queue §8— §7no arena available right now.");
+                p.sendMessage("§c§l» §7No arena available. Please rejoin the queue.");
             }
             return;
         }

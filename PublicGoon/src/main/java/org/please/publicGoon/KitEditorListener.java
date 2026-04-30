@@ -1,10 +1,10 @@
 package org.please.publicGoon;
 
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
@@ -35,11 +35,13 @@ public class KitEditorListener implements Listener {
 
         if (SELECT_TITLE.equals(title)) {
             event.setCancelled(true);
+            player.playSound(player.getLocation(), Sound.BLOCK_BAMBOO_WOOD_BUTTON_CLICK_ON, 1f, 1f);
             kitEditorGUI.handleInventoryClick(player, event.getSlot(), event.getCurrentItem());
             return;
         }
 
         if (!isLayoutView(title)) return;
+        player.playSound(player.getLocation(), Sound.BLOCK_BAMBOO_WOOD_BUTTON_CLICK_ON, 1f, 1f);
 
         // Save button takes priority - always cancels and triggers a save.
         if (event.getRawSlot() == SAVE_BUTTON_SLOT) {
@@ -86,6 +88,9 @@ public class KitEditorListener implements Listener {
         if (!(event.getPlayer() instanceof Player)) return;
         Player player = (Player) event.getPlayer();
         String title = event.getView().getTitle();
+        if (SELECT_TITLE.equals(title) || isLayoutView(title)) {
+            player.playSound(player.getLocation(), Sound.BLOCK_BAMBOO_WOOD_BUTTON_CLICK_OFF, 1f, 1f);
+        }
         if (isLayoutView(title)) {
             // Drop the per-player mode mapping; closing without saving discards the changes.
             kitLayoutGUI.clearMode(player);

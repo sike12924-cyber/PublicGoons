@@ -6,10 +6,14 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class FriendConfig {
+    private static final long REQUEST_EXPIRY_MS = 60_000L; // 60 seconds
     private final PublicGoon plugin;
     private final File dataFolder;
+    /** key = "targetUUID_requesterUUID", value = send-timestamp */
+    private final Map<String, Long> requestTimes = new ConcurrentHashMap<>();
 
     public FriendConfig(PublicGoon plugin) {
         this.plugin = plugin;
@@ -60,16 +64,20 @@ public class FriendConfig {
     }
 
     public void addRequest(UUID player, UUID requester) {
+        // Prune expired first
+        pruneExpired(player);
         FileConfiguration config = getConfig(player);
         List<String> requests = config.getStringList("requests");
         if (!requests.contains(requester.toString())) {
             requests.add(requester.toString());
             config.set("requests", requests);
             saveConfig(player, config);
+            requestTimes.put(player + "_" + requester, System.currentTimeMillis());
         }
     }
 
     public void removeRequest(UUID player, UUID requester) {
+        requestTimes.remove(player + "_" + requester);
         FileConfiguration config = getConfig(player);
         List<String> requests = config.getStringList("requests");
         requests.remove(requester.toString());
@@ -77,7 +85,29 @@ public class FriendConfig {
         saveConfig(player, config);
     }
 
+    private void pruneExpired(UUID player) {
+        FileConfiguration config = getConfig(player);
+        List<String> requests = config.getStringList("requests");
+        boolean changed = false;
+        Iterator<String> it = requests.iterator();
+        while (it.hasNext()) {
+            String uuidStr = it.next();
+            String key = player + "_" + uuidStr;
+            Long ts = requestTimes.get(key);
+            if (ts != null && System.currentTimeMillis() - ts > REQUEST_EXPIRY_MS) {
+                it.remove();
+                requestTimes.remove(key);
+                changed = true;
+            }
+        }
+        if (changed) {
+            config.set("requests", requests);
+            saveConfig(player, config);
+        }
+    }
+
     public List<UUID> getRequests(UUID player) {
+        pruneExpired(player);
         FileConfiguration config = getConfig(player);
         List<String> requests = config.getStringList("requests");
         List<UUID> result = new ArrayList<>();
