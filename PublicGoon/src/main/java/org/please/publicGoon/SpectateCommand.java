@@ -81,10 +81,17 @@ public class SpectateCommand implements CommandExecutor, Listener {
         Location teleportLoc = targetLoc.clone().add(0, 5, 0);
         player.teleport(teleportLoc);
 
-        // Set spectator mode after teleport
-        player.setGameMode(GameMode.SPECTATOR);
-        spectators.add(player.getUniqueId());
-        player.sendMessage("§aYou are now spectating §e" + target.getName() + "§a. Use /leave to return to lobby.");
+        // Set spectator mode after 0.5 second delay
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (player.isOnline()) {
+                    player.setGameMode(GameMode.SPECTATOR);
+                    spectators.add(player.getUniqueId());
+                    player.sendMessage("§aYou are now spectating §e" + target.getName() + "§a. Use /leave to return to lobby.");
+                }
+            }
+        }.runTaskLater(plugin, 10L); // 0.5 seconds = 10 ticks
 
         return true;
     }

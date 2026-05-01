@@ -112,9 +112,24 @@ public class DuelScoreboard {
     public void updateHealth(Player self, Player opp) {
         if (healthObj == null) return;
         if (self != null && self.isOnline())
-            healthObj.getScore(self.getName()).setScore((int) Math.round(self.getHealth()));
+            healthObj.getScore(self.getName()).setScore(getHealthScore(self.getHealth()));
         if (opp != null && opp.isOnline())
-            healthObj.getScore(opp.getName()).setScore((int) Math.round(opp.getHealth()));
+            healthObj.getScore(opp.getName()).setScore(getHealthScore(opp.getHealth()));
+    }
+
+    /**
+     * Converts health to a score that can display decimals when under 3 HP.
+     * For health >= 3: shows integer values (e.g., 5, 10, 20)
+     * For health < 3: shows one decimal place (e.g., 29 for 2.9, 15 for 1.5)
+     */
+    private int getHealthScore(double health) {
+        if (health < 3.0) {
+            // Show one decimal place by multiplying by 10
+            return (int) Math.round(health * 10);
+        } else {
+            // Show integer values
+            return (int) Math.round(health);
+        }
     }
 
     public void remove() {

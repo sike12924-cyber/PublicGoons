@@ -6,3 +6,11 @@
 #   z: 0.5
 #   yaw: 0.0
 #   pitch: 0.0
+
+lobby:
+  world: spawn
+  x: 75.5
+  y: 194.0
+  z: 43.5
+  yaw: 179.8869
+  pitch: 0.7319235

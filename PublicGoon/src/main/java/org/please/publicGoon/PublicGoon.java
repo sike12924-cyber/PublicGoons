@@ -14,6 +14,7 @@ public final class PublicGoon extends JavaPlugin {
     private LobbyListener lobbyListener;
     private LobbyCommand lobbyCommand;
     private LobbyProtectionListener lobbyProtectionListener;
+    private WorldSpawnProtectionListener worldSpawnProtectionListener;
     private DuelListener duelListener;
     private LeaveCommand leaveCommand;
     private SpectateCommand spectateCommand;
@@ -52,6 +53,7 @@ public final class PublicGoon extends JavaPlugin {
         lobbyListener = new LobbyListener(this, lobbyManager, inventorySwords, queueManager);
         lobbyCommand = new LobbyCommand(lobbyManager);
         lobbyProtectionListener = new LobbyProtectionListener(lobbyManager);
+        worldSpawnProtectionListener = new WorldSpawnProtectionListener(lobbyManager);
         duelListener = new DuelListener(duelManager);
         leaveCommand = new LeaveCommand(queueManager, duelManager);
         spectateCommand = new SpectateCommand(this, duelManager);
@@ -88,6 +90,7 @@ public final class PublicGoon extends JavaPlugin {
         getServer().getPluginManager().registerEvents(inventorySwords, this);
         getServer().getPluginManager().registerEvents(lobbyListener, this);
         getServer().getPluginManager().registerEvents(lobbyProtectionListener, this);
+        getServer().getPluginManager().registerEvents(worldSpawnProtectionListener, this);
         getServer().getPluginManager().registerEvents(duelListener, this);
         getServer().getPluginManager().registerEvents(spectateCommand, this);
         getServer().getPluginManager().registerEvents(kitEditorListener, this);
