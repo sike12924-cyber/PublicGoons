@@ -19,12 +19,14 @@ public class DuelManager {
     private final LobbyManager lobbyManager;
     private final Map<UUID, Duel> activeDuels = new HashMap<>();
     private final Deque<PendingMatch> pendingMatches = new ArrayDeque<>();
+    private final Map<UUID, Map<UUID, DuelRequest>> pendingDuelRequests = new HashMap<>(); // target -> (requester -> request)
 
     public DuelManager(PublicGoon plugin, ArenaManager arenaManager, LobbyManager lobbyManager) {
         this.plugin = plugin;
         this.arenaManager = arenaManager;
         this.lobbyManager = lobbyManager;
         startPendingProcessor();
+        startRequestExpiryProcessor();
     }
 
     public ArenaManager getArenaManager() { return arenaManager; }
@@ -53,6 +55,10 @@ public class DuelManager {
     }
 
     public void startMatch(Player a, Player b, GameModeConfig mode) {
+        startMatch(a, b, mode, mode.rounds);
+    }
+
+    public void startMatch(Player a, Player b, GameModeConfig mode, int roundsToWin) {
         for (Player p : new Player[]{a, b}) {
             if (p == null) continue;
             p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
@@ -71,11 +77,11 @@ public class DuelManager {
             return;
         }
 
-        launch(a, b, mode, arena);
+        launch(a, b, mode, arena, roundsToWin);
     }
 
-    private void launch(Player a, Player b, GameModeConfig mode, World arena) {
-        Duel duel = new Duel(plugin, this, a, b, mode, arena);
+    private void launch(Player a, Player b, GameModeConfig mode, World arena, int roundsToWin) {
+        Duel duel = new Duel(plugin, this, a, b, mode, arena, roundsToWin);
         activeDuels.put(a.getUniqueId(), duel);
         activeDuels.put(b.getUniqueId(), duel);
         duel.beginRound();
@@ -98,7 +104,7 @@ public class DuelManager {
             World arena = arenaManager.acquire(pm.mode.size);
             if (arena == null) break;
             it.remove();
-            launch(a, b, pm.mode, arena);
+            launch(a, b, pm.mode, arena, pm.mode.rounds);
         }
     }
 
@@ -109,6 +115,87 @@ public class DuelManager {
                 tryDispatchPending();
             }
         }.runTaskTimer(plugin, 40L, 40L);
+    }
+
+    // Pending duel request methods - supports multiple requests per target
+    public void addDuelRequest(DuelRequest request) {
+        pendingDuelRequests
+            .computeIfAbsent(request.getTargetUuid(), k -> new HashMap<>())
+            .put(request.getRequesterUuid(), request);
+    }
+
+    public DuelRequest getDuelRequest(UUID targetUuid, UUID requesterUuid) {
+        Map<UUID, DuelRequest> requestsForTarget = pendingDuelRequests.get(targetUuid);
+        if (requestsForTarget == null) return null;
+        
+        DuelRequest request = requestsForTarget.get(requesterUuid);
+        if (request != null && request.isExpired()) {
+            requestsForTarget.remove(requesterUuid);
+            if (requestsForTarget.isEmpty()) {
+                pendingDuelRequests.remove(targetUuid);
+            }
+            return null;
+        }
+        return request;
+    }
+
+    public DuelRequest getAnyDuelRequest(UUID targetUuid) {
+        Map<UUID, DuelRequest> requestsForTarget = pendingDuelRequests.get(targetUuid);
+        if (requestsForTarget == null) return null;
+        
+        // Return first non-expired request
+        for (Iterator<Map.Entry<UUID, DuelRequest>> it = requestsForTarget.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<UUID, DuelRequest> entry = it.next();
+            if (entry.getValue().isExpired()) {
+                it.remove();
+            } else {
+                return entry.getValue();
+            }
+        }
+        
+        if (requestsForTarget.isEmpty()) {
+            pendingDuelRequests.remove(targetUuid);
+        }
+        return null;
+    }
+
+    public void removeDuelRequest(UUID targetUuid, UUID requesterUuid) {
+        Map<UUID, DuelRequest> requestsForTarget = pendingDuelRequests.get(targetUuid);
+        if (requestsForTarget != null) {
+            requestsForTarget.remove(requesterUuid);
+            if (requestsForTarget.isEmpty()) {
+                pendingDuelRequests.remove(targetUuid);
+            }
+        }
+    }
+
+    public boolean hasDuelRequest(UUID targetUuid, UUID requesterUuid) {
+        return getDuelRequest(targetUuid, requesterUuid) != null;
+    }
+
+    private void startRequestExpiryProcessor() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Iterator<Map.Entry<UUID, Map<UUID, DuelRequest>>> targetIt = pendingDuelRequests.entrySet().iterator(); targetIt.hasNext();) {
+                    Map.Entry<UUID, Map<UUID, DuelRequest>> targetEntry = targetIt.next();
+                    Map<UUID, DuelRequest> requests = targetEntry.getValue();
+                    
+                    // Remove expired requests for this target
+                    for (Iterator<Map.Entry<UUID, DuelRequest>> reqIt = requests.entrySet().iterator(); reqIt.hasNext();) {
+                        Map.Entry<UUID, DuelRequest> reqEntry = reqIt.next();
+                        if (reqEntry.getValue().isExpired()) {
+                            reqIt.remove();
+                        }
+                    }
+                    
+                    // Remove target entry if no requests left
+                    if (requests.isEmpty()) {
+                        targetIt.remove();
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 1200L, 1200L); // Check every minute
     }
 
     private static class PendingMatch {

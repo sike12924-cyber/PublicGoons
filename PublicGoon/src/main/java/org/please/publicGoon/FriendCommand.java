@@ -28,35 +28,8 @@ public class FriendCommand implements CommandExecutor {
         }
 
         Player player = (Player) sender;
-
-        if (args.length == 0) {
-            // Open friend list GUI
-            friendGUI.openFriendsList(player, 0);
-            return true;
-        }
-
-        String subCommand = args[0].toLowerCase();
-
-        switch (subCommand) {
-            case "add":
-                return handleAdd(player, args);
-            case "remove":
-            case "delete":
-                return handleRemove(player, args);
-            case "list":
-                friendGUI.openFriendsList(player, 0);
-                return true;
-            case "requests":
-                friendGUI.openRequests(player);
-                return true;
-            case "accept":
-                return handleAccept(player, args);
-            case "deny":
-                return handleDeny(player, args);
-            default:
-                player.sendMessage("§cUsage: /friend <add/remove/list/requests/accept/deny> [player]");
-                return true;
-        }
+        player.sendMessage("§eFriends §8» §cComing soon!");
+        return true;
     }
 
     private boolean handleAdd(Player player, String[] args) {

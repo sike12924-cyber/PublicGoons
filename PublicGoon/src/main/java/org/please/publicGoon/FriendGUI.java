@@ -122,7 +122,7 @@ public class FriendGUI {
             // Clicked on a friend - could open their profile
             String friendName = name.replaceFirst("^§. ", "").trim();
             OfflinePlayer friend = Bukkit.getOfflinePlayer(friendName);
-            ProfileGUI profileGUI = new ProfileGUI(plugin);
+            ProfileGUI profileGUI = new ProfileGUI(plugin, plugin.getLobbyManager(), plugin.getDuelManager());
             profileGUI.open(player, friend);
         }
     }

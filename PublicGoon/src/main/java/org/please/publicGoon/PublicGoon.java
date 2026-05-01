@@ -26,6 +26,10 @@ public final class PublicGoon extends JavaPlugin {
     private FriendGUI friendGUI;
     private FriendCommand friendCommand;
     private FriendListener friendListener;
+    private DuelGUI duelGUI;
+    private DuelCommand duelCommand;
+    private DuelSetupListener duelSetupListener;
+    private DiscordCommand discordCommand;
 
     @Override
     public void onEnable() {
@@ -63,6 +67,10 @@ public final class PublicGoon extends JavaPlugin {
         friendGUI = new FriendGUI(this, friendConfig);
         friendCommand = new FriendCommand(this, friendConfig, friendGUI);
         friendListener = new FriendListener(friendGUI);
+        duelGUI = new DuelGUI();
+        duelCommand = new DuelCommand(this, duelGUI);
+        duelSetupListener = new DuelSetupListener(this, duelGUI);
+        discordCommand = new DiscordCommand();
 
         getCommand("queue").setExecutor(queueCommand);
         getCommand("lobby").setExecutor(lobbyCommand);
@@ -71,6 +79,8 @@ public final class PublicGoon extends JavaPlugin {
         getCommand("spectate").setExecutor(spectateCommand);
         getCommand("profile").setExecutor(profileCommand);
         getCommand("friend").setExecutor(friendCommand);
+        getCommand("duel").setExecutor(duelCommand);
+        getCommand("discord").setExecutor(discordCommand);
 
         // Events
         getServer().getPluginManager().registerEvents(queueCommand, this);
@@ -83,8 +93,23 @@ public final class PublicGoon extends JavaPlugin {
         getServer().getPluginManager().registerEvents(kitEditorListener, this);
         getServer().getPluginManager().registerEvents(profileListener, this);
         getServer().getPluginManager().registerEvents(friendListener, this);
+        getServer().getPluginManager().registerEvents(duelSetupListener, this);
+
+        // Register PlaceholderAPI expansion
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new PublicGoonExpansion(this).register();
+            getLogger().info("PlaceholderAPI expansion registered!");
+        }
 
         getLogger().info("PublicGoon PvP Queue Plugin enabled!");
+    }
+
+    public DuelManager getDuelManager() {
+        return duelManager;
+    }
+
+    public LobbyManager getLobbyManager() {
+        return lobbyManager;
     }
 
     @Override

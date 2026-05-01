@@ -4,6 +4,7 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -15,9 +16,13 @@ import java.util.List;
 
 public class ProfileGUI {
     private final PublicGoon plugin;
+    private final LobbyManager lobbyManager;
+    private final DuelManager duelManager;
 
-    public ProfileGUI(PublicGoon plugin) {
+    public ProfileGUI(PublicGoon plugin, LobbyManager lobbyManager, DuelManager duelManager) {
         this.plugin = plugin;
+        this.lobbyManager = lobbyManager;
+        this.duelManager = duelManager;
     }
 
     public void open(Player viewer, OfflinePlayer target) {
@@ -62,20 +67,29 @@ public class ProfileGUI {
             List<String> lore = new ArrayList<>();
             lore.add("");
 
-            // Use PlaceholderAPI placeholders - LuckPerms for rank
-            String rank = getPlaceholder(target, "%luckperms_primary_group%");
+            // Use PlaceholderAPI placeholders - LuckPerms for prefix
+            String rank = getPlaceholder(target, "%luckperms_prefix%");
             String playtime = getPlaceholder(target, "%statistic_time_played%");
             String kills = getPlaceholder(target, "%statistic_player_kills%");
             String deaths = getPlaceholder(target, "%statistic_deaths%");
-            String kd = getPlaceholder(target, "%kd_ratio%");
             String coins = getPlaceholder(target, "%balance%");
 
-            lore.add("§7Rank: §f" + (rank.isEmpty() ? "Member" : rank));
+            // Calculate KD ratio
+            int killsInt = parseIntSafe(kills);
+            int deathsInt = parseIntSafe(deaths);
+            double kd = deathsInt == 0 ? killsInt : (double) killsInt / deathsInt;
+            String kdFormatted = String.format("%.2f", kd);
+
+            // Get status icon - 🌲 for lobby, ⚔️ for in-game
+            String statusIcon = getStatusIcon(onlineTarget);
+
+            lore.add("§7Rank: §f" + (rank.isEmpty() ? "§7Member" : rank));
+            lore.add("§7Status: " + statusIcon);
             lore.add("§7Playtime: §f" + (playtime.isEmpty() ? "0d, 0hrs, 0m" : playtime));
             lore.add("");
             lore.add("§7Kills: §f" + (kills.isEmpty() ? "0" : kills));
             lore.add("§7Deaths: §f" + (deaths.isEmpty() ? "0" : deaths));
-            lore.add("§7K/D: §f" + (kd.isEmpty() ? "0.00" : kd));
+            lore.add("§7K/D: §f" + kdFormatted);
             lore.add("");
             lore.add("§7Coins: §6" + (coins.isEmpty() ? "0" : coins));
 
@@ -90,5 +104,27 @@ public class ProfileGUI {
             return PlaceholderAPI.setPlaceholders(player, placeholder);
         }
         return "";
+    }
+
+    private int parseIntSafe(String str) {
+        if (str == null || str.isEmpty()) return 0;
+        try {
+            return Integer.parseInt(str.replaceAll("[^0-9-]", ""));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private String getStatusIcon(Player onlineTarget) {
+        if (onlineTarget == null || !onlineTarget.isOnline()) {
+            return "§7●§f";
+        }
+        if (duelManager.inDuel(onlineTarget.getUniqueId())) {
+            return "§7⚔️§f";
+        }
+        if (lobbyManager.isInLobby(onlineTarget)) {
+            return "§7🌲§f";
+        }
+        return "§6●§f";
     }
 }

@@ -12,7 +12,7 @@ public class ProfileCommand implements CommandExecutor {
 
     public ProfileCommand(PublicGoon plugin) {
         this.plugin = plugin;
-        this.profileGUI = new ProfileGUI(plugin);
+        this.profileGUI = new ProfileGUI(plugin, plugin.getLobbyManager(), plugin.getDuelManager());
     }
 
     @Override

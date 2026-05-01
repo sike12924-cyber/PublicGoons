@@ -29,6 +29,7 @@ public class Duel {
     private final UUID p2;
     private final GameModeConfig mode;
     private final World arena;
+    private final int roundsToWin;
 
     private int scoreP1 = 0;
     private int scoreP2 = 0;
@@ -45,13 +46,14 @@ public class Duel {
     private DuelScoreboard scoreboardP2;
     private BukkitTask scoreboardUpdateTask;
 
-    public Duel(PublicGoon plugin, DuelManager manager, Player p1, Player p2, GameModeConfig mode, World arena) {
+    public Duel(PublicGoon plugin, DuelManager manager, Player p1, Player p2, GameModeConfig mode, World arena, int roundsToWin) {
         this.plugin = plugin;
         this.manager = manager;
         this.p1 = p1.getUniqueId();
         this.p2 = p2.getUniqueId();
         this.mode = mode;
         this.arena = arena;
+        this.roundsToWin = roundsToWin;
     }
 
     public UUID getPlayer1() { return p1; }
@@ -249,7 +251,7 @@ public class Duel {
             winner.setSaturation(20f);
         }
 
-        boolean matchOver = sWinner >= mode.rounds;
+        boolean matchOver = sWinner >= roundsToWin;
 
         if (!matchOver) {
             // Titles + sounds
@@ -279,7 +281,7 @@ public class Duel {
     }
 
     private void sendRoundChat(Player winner, Player loser, int sWinner, int sLoser) {
-        int remaining = mode.rounds - sWinner;
+        int remaining = roundsToWin - sWinner;
         String winnerName = winner != null ? winner.getName() : "Opponent";
         for (Player target : new Player[]{winner, loser}) {
             if (target == null) continue;

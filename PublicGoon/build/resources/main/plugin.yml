@@ -28,6 +28,13 @@ commands:
     description: Manage friends
     usage: /friend <add/remove/list/requests/accept/deny> [player]
     aliases: [f]
+  duel:
+    description: Send or respond to a duel request
+    usage: /duel <player> | /duel accept <player> | /duel deny <player>
+  discord:
+    description: Get the Discord server invite link
+    usage: /discord
+    aliases: [dc]
 softdepend: [PlaceholderAPI, LuckPerms]
 permissions:
   publicgoon.admin:
